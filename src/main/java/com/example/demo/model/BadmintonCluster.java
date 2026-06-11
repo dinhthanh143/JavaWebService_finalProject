@@ -2,6 +2,8 @@ package com.example.demo.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "badminton_clusters")
@@ -16,8 +18,8 @@ public class BadmintonCluster {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
-    private String name;
+    @Column(name = "name", nullable = false, length = 100)
+    private String clusterName;
 
     @Column(nullable = false, length = 255)
     private String address;
@@ -28,4 +30,8 @@ public class BadmintonCluster {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")
     private User manager;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "cluster", cascade = CascadeType.ALL)
+    private List<Court> courts = new ArrayList<>();
 }

@@ -1,5 +1,6 @@
 package com.example.demo.model;
 
+import com.example.demo.constraints.BookingStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -19,31 +20,32 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "booking_date", nullable = false)
-    private LocalDate bookingDate;
-
-    @Column(name = "time_slot", nullable = false, length = 50)
-    private String timeSlot; // Ví dụ: "17:00-18:00"
-
-    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalPrice;
-
-    @Column(nullable = false, length = 20)
-    private String status;
-
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "court_id", nullable = false)
-    private Court court;
+    @JoinColumn(name = "slot_id", nullable = false)
+    private Slot slot;
+
+    @Column(name = "booking_date", nullable = false)
+    private LocalDate bookingDate;
+
+    @Column(name = "total_price", nullable = false)
+    private BigDecimal totalPrice;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private BookingStatus status; // Trạng thái: PENDING, CONFIRMED, CANCELLED
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = BookingStatus.PENDING;
+        }
     }
 }

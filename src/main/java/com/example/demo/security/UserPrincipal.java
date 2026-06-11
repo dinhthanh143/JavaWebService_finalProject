@@ -23,6 +23,8 @@ public class UserPrincipal implements UserDetails {
         return List.of(new SimpleGrantedAuthority(user.getRole()));
     }
 
+
+
     @Override
     public String getPassword() {
         return user.getPassword();

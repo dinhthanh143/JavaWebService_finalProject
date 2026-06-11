@@ -1,5 +1,6 @@
 package com.example.demo.exception;
 
+import com.example.demo.dto.ApiResponse;
 import com.example.demo.model.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,9 +15,31 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler
-    public ResponseEntity<ErrorResponse> handleException(RuntimeException e) {
-        return ResponseEntity.notFound().build();
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<?> handleResourceNotFound(ResourceNotFoundException ex) {
+
+        ApiResponse<Object> response = ApiResponse.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .message(ex.getMessage())
+                .data(null)
+                .error("Not Found")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiResponse<Object>> handleBadRequestException(BadRequestException ex) {
+        ApiResponse<Object> response = ApiResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(ex.getMessage())
+                .data(null)
+                .error("Bad Request")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler
@@ -34,5 +57,10 @@ public class GlobalExceptionHandler {
                 details
         );
         return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler
+    public ResponseEntity<ErrorResponse> handleException(RuntimeException e) {
+        return ResponseEntity.notFound().build();
     }
 }

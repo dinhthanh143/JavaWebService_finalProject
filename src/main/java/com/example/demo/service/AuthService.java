@@ -4,16 +4,17 @@ package com.example.demo.service;
 import com.example.demo.dto.AuthResponse;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.RegisterRequest;
-import com.example.demo.exception.EmailExisted;
-import com.example.demo.exception.InvalidToken;
-import com.example.demo.exception.TokenNotFound;
-import com.example.demo.exception.UsernameExisted;
+import com.example.demo.exception.BadRequestException;
+
 import com.example.demo.model.Token;
+import com.example.demo.model.TokenBlacklist;
 import com.example.demo.model.User;
+import com.example.demo.repository.TokenBlacklistRepository;
 import com.example.demo.repository.TokenRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.JwtProvider;
 import com.example.demo.security.UserPrincipal;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -44,6 +45,9 @@ public class AuthService {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    @Autowired
+    private TokenBlacklistRepository tokenBlacklistRepository;
+
 
     private void saveUserToken(UserPrincipal principal , String jwt){
         User u = principal.getUser();
@@ -67,6 +71,7 @@ public class AuthService {
         tokenRepository.saveAll(validUserTokens);
     }
 
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
@@ -90,10 +95,10 @@ public class AuthService {
     public String register(RegisterRequest request) {
 
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new UsernameExisted("Tên tài khoản đã tồn tại");
+            throw new BadRequestException("Tên tài khoản đã tồn tại");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailExisted("Email đã tồn tại");
+            throw new BadRequestException("Email đã tồn tại");
         }
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         User u = User.builder()
@@ -111,7 +116,8 @@ public class AuthService {
     }
 
 
-    public AuthResponse refreshToken(String token) {
+    @Transactional
+    public AuthResponse refreshToken(String token, String oldToken) {
         Token tokenReal = tokenRepository.findByTokenValue(token)
                 .orElseThrow(() -> new RuntimeException("Refresh token không tồn tại"));
 
@@ -126,6 +132,17 @@ public class AuthService {
 
         if (jwtProvider.isTokenExpired(tokenValue) || !jwtProvider.isTokenValid(tokenValue, userPrincipal)) {
             throw new RuntimeException("Token hết hạn hoặc không hợp lệ về mặt chữ ký");
+        }
+        if (oldToken != null && oldToken.startsWith("Bearer ")) {
+            String cleanRawToken = oldToken.substring(7);
+
+            if (!tokenBlacklistRepository.existsByToken(cleanRawToken)) {
+                TokenBlacklist blacklist = TokenBlacklist.builder()
+                        .token(cleanRawToken)
+                        .expiryTime(java.time.LocalDateTime.now().plusMinutes(15))
+                        .build();
+                tokenBlacklistRepository.save(blacklist);
+            }
         }
 
         String accessToken = jwtProvider.generateAccessToken(userPrincipal);

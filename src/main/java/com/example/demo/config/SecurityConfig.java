@@ -47,7 +47,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/bookings/**").hasAnyRole("USER", "MANAGER", "ADMIN")
+                        .requestMatchers("/api/v1/courts/**").hasAnyRole("USER", "MANAGER", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -84,12 +86,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public UserDetailsService userDetailsService() {
-        return username -> userRepository.findByUsername(username)
-                .map(UserPrincipal::new)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
-    }
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {

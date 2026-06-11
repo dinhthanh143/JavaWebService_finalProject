@@ -1,5 +1,6 @@
 package com.example.demo.security;
 
+import com.example.demo.repository.TokenBlacklistRepository;
 import com.example.demo.repository.TokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,8 +22,15 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Autowired
     private JwtProvider jwtProvider;
+
+    @Autowired
     private UserDetailsService userDetailsService;
+
+    @Autowired
     private TokenRepository tokenRepository;
+
+    @Autowired
+    private TokenBlacklistRepository tokenBlacklistRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -36,8 +44,12 @@ public class JwtFilter extends OncePerRequestFilter {
         }
         jwt = authHeader.substring(7);
         username = jwtProvider.getUserNameFromToken(jwt);
+        if(tokenBlacklistRepository.existsByToken(jwt)){
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        if(username != null || SecurityContextHolder.getContext().getAuthentication() == null){
+        if(username != null && SecurityContextHolder.getContext().getAuthentication() == null){
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
             if (jwtProvider.isTokenValid(jwt, userDetails) ){
@@ -49,7 +61,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                // Set người dùng vào Context -> Chính thức coi như đã Đăng nhập hợp lệ cho Request này
+                // Set người dùng vào Context
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
 

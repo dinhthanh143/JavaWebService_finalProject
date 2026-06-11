@@ -20,7 +20,6 @@ public class TokenBlacklist {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String token;
 
-    // Dựa vào đây để viết một hàm tự động xóa (Schedule) dọn dẹp DB sau này.
     @Column(name = "expiry_time", nullable = false)
     private LocalDateTime expiryTime;
 
