@@ -2,6 +2,7 @@ package com.example.demo.config;
 
 import com.example.demo.model.TokenBlacklist;
 import com.example.demo.repository.TokenBlacklistRepository;
+import com.example.demo.security.JwtAuthenticationEntryPoint;
 import com.example.demo.security.JwtFilter;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.repository.TokenRepository;
@@ -40,6 +41,9 @@ public class SecurityConfig {
 
     @Autowired
     private TokenBlacklistRepository tokenBlacklistRepository;
+
+    @Autowired
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -81,6 +85,8 @@ public class SecurityConfig {
                             response.setCharacterEncoding("UTF-8");
                             response.getWriter().write("{\"message\": \"Đăng xuất thành công\"}");
                         })
+                ).exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 );
 
         return http.build();

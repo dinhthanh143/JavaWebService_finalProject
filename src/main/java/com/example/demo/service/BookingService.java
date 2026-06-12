@@ -102,11 +102,23 @@ public class BookingService {
     }
 
     private BookingResponse mapToBookingResponse(Booking booking) {
+        String courtName = "N/A";
+        String clusterName = "N/A";
+        String timeSlot = "N/A";
+        if (booking.getSlot() != null) {
+            timeSlot = booking.getSlot().getStartTime() + " - " + booking.getSlot().getEndTime();
+            if (booking.getSlot().getCourt() != null) {
+                courtName = booking.getSlot().getCourt().getCourtName();
+                if (booking.getSlot().getCourt().getCluster() != null) {
+                    clusterName = booking.getSlot().getCourt().getCluster().getClusterName();
+                }
+            }
+        }
         return BookingResponse.builder()
                 .id(booking.getId())
-                .courtName(booking.getSlot().getCourt().getCourtName())
-                .clusterName(booking.getSlot().getCourt().getCluster().getClusterName())
-                .timeSlot(booking.getSlot().getStartTime() + " - " + booking.getSlot().getEndTime())
+                .courtName(courtName)
+                .clusterName(clusterName)
+                .timeSlot(timeSlot)
                 .bookingDate(booking.getBookingDate())
                 .totalPrice(booking.getTotalPrice())
                 .status(booking.getStatus().name())

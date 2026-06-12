@@ -1,14 +1,13 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.ApiResponse;
-import com.example.demo.dto.AuthResponse;
-import com.example.demo.dto.LoginRequest;
-import com.example.demo.dto.RegisterRequest;
+import com.example.demo.dto.*;
+import com.example.demo.security.UserPrincipal;
 import com.example.demo.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -63,4 +62,40 @@ public class AuthController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody ChangePasswordRequest request
+    ) {
+        String message = authService.changePassword(principal.getUser().getId(), request);
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .status(HttpStatus.OK.value())
+                .message(message)
+                .data(null)
+                .error(null)
+                .timestamp(java.time.LocalDateTime.now())
+                .build();
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(
+            @RequestParam String username,
+            @RequestParam String newPassword
+    ) {
+        String result = authService.forgotPassword(username, newPassword);
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .status(HttpStatus.OK.value())
+                .message(result)
+                .data(null)
+                .error(null)
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
 }

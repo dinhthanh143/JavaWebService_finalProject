@@ -1,7 +1,9 @@
 package com.example.demo.security;
 
+import com.example.demo.dto.ApiResponse;
 import com.example.demo.repository.TokenBlacklistRepository;
 import com.example.demo.repository.TokenRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
@@ -44,8 +47,21 @@ public class JwtFilter extends OncePerRequestFilter {
         }
         jwt = authHeader.substring(7);
         username = jwtProvider.getUserNameFromToken(jwt);
-        if(tokenBlacklistRepository.existsByToken(jwt)){
-            filterChain.doFilter(request, response);
+        if (jwt != null && tokenBlacklistRepository.existsByToken(jwt)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+
+            ApiResponse<Object> apiResponse = ApiResponse.builder()
+                    .status(HttpServletResponse.SC_UNAUTHORIZED)
+                    .message("Token này đã bị đăng xuất hoặc vô hiệu hóa!")
+                    .data(null)
+                    .error("Unauthorized")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
             return;
         }
 

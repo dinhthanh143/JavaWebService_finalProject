@@ -2,10 +2,12 @@ package com.example.demo.service;
 
 
 import com.example.demo.dto.AuthResponse;
+import com.example.demo.dto.ChangePasswordRequest;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.RegisterRequest;
 import com.example.demo.exception.BadRequestException;
 
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.Token;
 import com.example.demo.model.TokenBlacklist;
 import com.example.demo.model.User;
@@ -162,6 +164,8 @@ public class AuthService {
     }
 
 
+
+
     private void saveUserRefreshToken(UserPrincipal userPrincipal, String refreshToken) {
         User user = userPrincipal.getUser();
         Token token = Token.builder()
@@ -173,7 +177,49 @@ public class AuthService {
         tokenRepository.save(token);
     }
 
+    @Transactional
+    public String changePassword(Long userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng!"));
 
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new BadRequestException("Mật khẩu cũ không chính xác!");
+        }
+
+        if (request.getOldPassword().equals(request.getNewPassword())) {
+            throw new BadRequestException("Mật khẩu mới không được trùng với mật khẩu cũ!");
+        }
+
+        String encodedPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(encodedPassword);
+        return "Đổi mật khẩu thành công!";
+    }
+
+    @Transactional
+    public String forgotPassword(String username, String newPassword) {
+        // 1. Kiểm tra username truyền vào có trống không
+        if (username == null || username.trim().isEmpty()) {
+            throw new BadRequestException("Tên tài khoản không được để trống!");
+        }
+
+        // 2. Kiểm tra mật khẩu mới có hợp lệ không (ví dụ tối thiểu 6 ký tự)
+        if (newPassword == null || newPassword.trim().length() < 6) {
+            throw new BadRequestException("Mật khẩu mới phải có tối thiểu 6 ký tự!");
+        }
+
+        // 3. Tìm kiếm User theo username trong Database
+        User user = userRepository.findByUsername(username.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Tài khoản với tên '" + username + "' không tồn tại trên hệ thống!"));
+
+        // 4. Mã hóa mật khẩu mới và cập nhật vào đối tượng
+        String encodedPassword = passwordEncoder.encode(newPassword.trim());
+        user.setPassword(encodedPassword);
+
+        // 5. Lưu lại vào DB
+        userRepository.save(user);
+
+        return "Đặt lại mật khẩu thành công!";
+    }
 
 
 
