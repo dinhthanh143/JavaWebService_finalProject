@@ -32,7 +32,7 @@ public class UserController {
         ApiResponse<Page<UserResponse>> response = ApiResponse.<Page<UserResponse>>builder()
                 .status(HttpStatus.OK.value())
                 .message("Lấy danh sách người dùng thành công!")
-                .data(users) // Giữ nguyên object Page để Frontend có đủ metadata phân trang
+                .data(users) 
                 .timestamp(LocalDateTime.now())
                 .build();
 
