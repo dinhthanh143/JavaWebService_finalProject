@@ -80,20 +80,33 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/forgot-password")
-    public ResponseEntity<ApiResponse<String>> forgotPassword(
-            @RequestParam String username,
-            @RequestParam String newPassword
-    ) {
-        String result = authService.forgotPassword(username, newPassword);
+    @PostMapping("/forgot-password/request")
+    public ResponseEntity<ApiResponse<String>> requestForgotPassword(@RequestParam String email) {
+        String message = authService.requestForgotPasswordOtp(email);
 
         ApiResponse<String> response = ApiResponse.<String>builder()
                 .status(HttpStatus.OK.value())
-                .message(result)
-                .data(null)
-                .error(null)
+                .message(message)
                 .timestamp(LocalDateTime.now())
                 .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/forgot-password/reset")
+    public ResponseEntity<ApiResponse<String>> resetPassword(
+            @RequestParam String email,
+            @RequestParam String otp,
+            @RequestParam String newPassword
+    ) {
+        String message = authService.resetPasswordWithOtp(email, otp, newPassword);
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .status(HttpStatus.OK.value())
+                .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+
         return ResponseEntity.ok(response);
     }
 

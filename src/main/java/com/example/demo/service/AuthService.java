@@ -8,9 +8,11 @@ import com.example.demo.dto.RegisterRequest;
 import com.example.demo.exception.BadRequestException;
 
 import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.model.PasswordResetOtp;
 import com.example.demo.model.Token;
 import com.example.demo.model.TokenBlacklist;
 import com.example.demo.model.User;
+import com.example.demo.repository.PasswordResetOtpRepository;
 import com.example.demo.repository.TokenBlacklistRepository;
 import com.example.demo.repository.TokenRepository;
 import com.example.demo.repository.UserRepository;
@@ -26,6 +28,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -49,6 +52,9 @@ public class AuthService {
 
     @Autowired
     private TokenBlacklistRepository tokenBlacklistRepository;
+
+    @Autowired
+    private PasswordResetOtpRepository otpRepository;
 
 
     private void saveUserToken(UserPrincipal principal , String jwt){
@@ -196,29 +202,58 @@ public class AuthService {
     }
 
     @Transactional
-    public String forgotPassword(String username, String newPassword) {
-        // 1. Kiểm tra username truyền vào có trống không
-        if (username == null || username.trim().isEmpty()) {
-            throw new BadRequestException("Tên tài khoản không được để trống!");
+    public String requestForgotPasswordOtp(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new BadRequestException("Email không được để trống!");
         }
 
-        // 2. Kiểm tra mật khẩu mới có hợp lệ không (ví dụ tối thiểu 6 ký tự)
+        User user = userRepository.findByEmail(email.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản nào đăng ký với email này!"));
+
+        otpRepository.deleteByEmail(email.trim());
+
+        String generatedOtp = String.valueOf((int) ((Math.random() * (999999 - 100000)) + 100000));
+
+        PasswordResetOtp passwordResetOtp = PasswordResetOtp.builder()
+                .email(email.trim())
+                .otp(generatedOtp)
+                .expiryDate(LocalDateTime.now().plusMinutes(5))
+                .build();
+
+        otpRepository.save(passwordResetOtp);
+
+        System.out.println("=== SYSTEM OTP CHO EMAIL [" + email + "] LÀ: " + generatedOtp + " ===");
+
+        return "Mã OTP đặt lại mật khẩu đã được tạo thành công! (Vui lòng kiểm tra log hệ thống)";
+    }
+
+    @Transactional
+    public String resetPasswordWithOtp(String email, String otp, String newPassword) {
+        if (otp == null || otp.trim().isEmpty()) {
+            throw new BadRequestException("Mã OTP không được để trống!");
+        }
         if (newPassword == null || newPassword.trim().length() < 6) {
             throw new BadRequestException("Mật khẩu mới phải có tối thiểu 6 ký tự!");
         }
 
-        // 3. Tìm kiếm User theo username trong Database
-        User user = userRepository.findByUsername(username.trim())
-                .orElseThrow(() -> new ResourceNotFoundException("Tài khoản với tên '" + username + "' không tồn tại trên hệ thống!"));
+        PasswordResetOtp resetOtp = otpRepository.findByEmailAndOtp(email.trim(), otp.trim())
+                .orElseThrow(() -> new BadRequestException("Mã OTP không chính xác hoặc không hợp lệ!"));
 
-        // 4. Mã hóa mật khẩu mới và cập nhật vào đối tượng
-        String encodedPassword = passwordEncoder.encode(newPassword.trim());
-        user.setPassword(encodedPassword);
+        // 2. Kiểm tra xem mã OTP này đã bị quá 5 phút chưa
+        if (resetOtp.isExpired()) {
+            otpRepository.delete(resetOtp); // Xóa luôn bản ghi hết hạn
+            throw new BadRequestException("Mã OTP này đã hết hạn sử dụng. Vui lòng yêu cầu mã mới!");
+        }
 
-        // 5. Lưu lại vào DB
+        User user = userRepository.findByEmail(email.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Tài khoản liên kết với email này không còn tồn tại!"));
+
+        user.setPassword(passwordEncoder.encode(newPassword.trim()));
         userRepository.save(user);
 
-        return "Đặt lại mật khẩu thành công!";
+        otpRepository.delete(resetOtp);
+
+        return "Thay đổi mật khẩu mới thành công!";
     }
 
 
