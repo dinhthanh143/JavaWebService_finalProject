@@ -94,7 +94,6 @@ public class AuthController {
                 .error(null)
                 .timestamp(LocalDateTime.now())
                 .build();
-
         return ResponseEntity.ok(response);
     }
 
